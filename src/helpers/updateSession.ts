@@ -16,7 +16,7 @@ export async function updateSession(
     serialize("sid", ctx.session.sid, {
       maxAge: opts.idleTimeout,
       httpOnly: true,
-      sameSite: "strict",
+      sameSite: "lax",
       secure: process.env["NODE_ENV"] !== "development",
     })
   );

@@ -3,18 +3,16 @@ import { createHmac, randomBytes } from "crypto";
 import type { Store } from "../types.js";
 
 export async function createSession(store: Store, opts: Options) {
-  const rawID = await (function (): Promise<string> {
-    return new Promise(function executor(resolve, reject) {
-      randomBytes(16, function onBytes(err, buf) {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve(buf.toString("hex"));
+  const rawID = await new Promise<string>(function executor(resolve, reject) {
+    randomBytes(16, function onBytes(err, buf) {
+      if (err) {
+        reject(err);
         return;
-      });
+      }
+      resolve(buf.toString("hex"));
+      return;
     });
-  })();
+  });
   const mac = createHmac("sha256", opts.secret)
     .update(rawID, "hex")
     .digest("hex");
