@@ -17,5 +17,6 @@ export async function handleTimeout(
   ctx.session = { sid };
   const sessionString = JSON.stringify(ctx.session);
   await next(req, res, ctx);
+  // Don't await updateSession. See index.ts for proper handling.
   await updateSession(store, sessionString, ctx, opts);
 }
