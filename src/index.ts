@@ -40,6 +40,8 @@ function Session(store: Store) {
         }
 
         // verify mac
+        // TODO: mv to fn that throws BadRequestError,
+        // or use regex test to verify isHex
         const generatedMAC = createHmac("sha256", opts.secret)
           .update(rawID, "hex")
           .digest("hex");
