@@ -39,12 +39,18 @@ function Session(store: Store) {
           return;
         }
 
-        // verify mac
-        // TODO: mv to fn that throws BadRequestError,
-        // or use regex test to verify isHex
+        // check if id is 22 character base64url string
+        const isValidID = /^[A-Za-z0-9_-]{22}$/.test(rawID);
+        if (!isValidID) {
+          res.statusCode = 400;
+          res.end();
+          return;
+        }
+
+        // verify mac matches
         const generatedMAC = createHmac("sha256", opts.secret)
-          .update(rawID, "hex")
-          .digest("hex");
+          .update(rawID, "base64url")
+          .digest("base64url");
         if (mac !== generatedMAC) {
           res.statusCode = 400;
           res.end();

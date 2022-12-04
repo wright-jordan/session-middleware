@@ -9,13 +9,13 @@ export async function createSession(store: Store, opts: Options) {
         reject(err);
         return;
       }
-      resolve(buf.toString("hex"));
+      resolve(buf.toString("base64url"));
       return;
     });
   });
   const mac = createHmac("sha256", opts.secret)
-    .update(rawID, "hex")
-    .digest("hex");
+    .update(rawID, "base64url")
+    .digest("base64url");
   const sid = rawID + "." + mac;
   await store.create(sid, opts.absoluteTimeout);
   return sid;
