@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "http";
 import type * as tsHTTP from "ts-http";
-import type { Options } from "../types.js";
+import type { SessionOptions } from "../types.js";
 import { createSession } from "./createSession.js";
 import { updateSession } from "./updateSession.js";
 import type { Store } from "../types.js";
@@ -11,7 +11,7 @@ export async function handleTimeout(
   req: IncomingMessage,
   res: ServerResponse,
   ctx: tsHTTP.Context,
-  opts: Options
+  opts: SessionOptions
 ) {
   const sid = await createSession(store, opts);
   ctx.session = { sid };

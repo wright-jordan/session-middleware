@@ -1,8 +1,8 @@
-import type { Options } from "../types.js";
+import type { SessionOptions } from "../types.js";
 import { createHmac, randomBytes } from "crypto";
 import type { Store } from "../types.js";
 
-export async function createSession(store: Store, opts: Options) {
+export async function createSession(store: Store, opts: SessionOptions) {
   const rawID = await new Promise<string>(function executor(resolve, reject) {
     randomBytes(16, function onBytes(err, buf) {
       if (err) {

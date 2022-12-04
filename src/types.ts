@@ -8,7 +8,7 @@ export interface Store {
   create: (sid: string, ttl: number) => Promise<string>;
 }
 
-export interface Options {
+export interface SessionOptions {
   secret: string;
   idleTimeout: number;
   absoluteTimeout: number;

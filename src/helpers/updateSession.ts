@@ -1,12 +1,12 @@
 import type * as tsHTTP from "ts-http";
 import { serialize } from "cookie";
-import type { Options, Store } from "../types.js";
+import type { SessionOptions, Store } from "../types.js";
 
 export async function updateSession(
   store: Store,
   oldSession: string,
   ctx: tsHTTP.Context,
-  opts: Options
+  opts: SessionOptions
 ) {
   const updatedSession = JSON.stringify(ctx.session);
   if (oldSession !== updatedSession) {

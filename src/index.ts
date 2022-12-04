@@ -2,7 +2,7 @@ import type * as tsHTTP from "ts-http";
 import { parse } from "cookie";
 import { createHmac } from "crypto";
 import type * as _ from "cookies-middleware";
-import type { Options, SessionData, Store } from "./types.js";
+import type { SessionOptions, SessionData, Store } from "./types.js";
 import { updateSession } from "./helpers/updateSession.js";
 import { handleTimeout } from "./helpers/handleTimeout.js";
 
@@ -12,8 +12,8 @@ declare module "ts-http" {
   }
 }
 
-function Session(store: Store) {
-  function use(next: tsHTTP.Handler, opts: Options): tsHTTP.Handler {
+function Session(store: Store, opts: SessionOptions) {
+  function use(next: tsHTTP.Handler): tsHTTP.Handler {
     return async function sessionMiddleware(req, res, ctx) {
       try {
         // get cookie header and parse
@@ -86,5 +86,5 @@ function Session(store: Store) {
   };
 }
 
-export { SessionData, Store, Options };
+export { SessionData, Store, SessionOptions };
 export { Session };
