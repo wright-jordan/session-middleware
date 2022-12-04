@@ -86,5 +86,5 @@ function Session(store: Store) {
   };
 }
 
-export { SessionData };
+export { SessionData, Store, Options };
 export { Session };
