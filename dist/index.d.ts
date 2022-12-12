@@ -1,12 +1,30 @@
+/// <reference types="node" />
 import type * as tsHTTP from "ts-http";
-import type { Options, SessionData, Store } from "./types.js";
 declare module "ts-http" {
     interface Context {
-        session: SessionData;
+        sessionID: string;
+        sessionData: SessionData;
     }
 }
-declare function Session(store: Store): {
-    use: (next: tsHTTP.Handler, opts: Options) => tsHTTP.Handler;
-};
-export { SessionData };
-export { Session };
+export type SessionErrorCode = "Store#get" | "Store#set";
+export declare class SessionError extends Error {
+    code: SessionErrorCode;
+    constructor(msg: string, code: SessionErrorCode, opts: ErrorOptions);
+}
+export interface SessionData {
+    _absoluteDeadline: number;
+}
+export interface SessionStore {
+    get(id: string): Promise<[SessionData, SessionError | null]>;
+    set(id: string, sess: SessionData): Promise<SessionError | null>;
+}
+export interface SessionConfig {
+    secret: Buffer;
+    store: SessionStore;
+    log(...v: unknown[]): void;
+}
+export interface SessionMiddleware {
+    config: SessionConfig;
+    use(this: SessionMiddleware, next: tsHTTP.Handler): tsHTTP.Handler;
+}
+export declare function Session(config: SessionConfig): SessionMiddleware;

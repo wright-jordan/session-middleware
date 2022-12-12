@@ -1,66 +1,29 @@
-import { parse } from "cookie";
-import { createHmac } from "crypto";
-import { updateSession } from "./helpers/updateSession.js";
-import { handleTimeout } from "./helpers/handleTimeout.js";
-function Session(store) {
-    function use(next, opts) {
-        return async function sessionMiddleware(req, res, ctx) {
-            try {
-                // get cookie header and parse
-                const cookieString = req.headers.cookie;
-                if (!cookieString) {
-                    await handleTimeout(store, next, req, res, ctx, opts);
-                    return;
-                }
-                const cookie = parse(cookieString);
-                // get sid from cookie object
-                const sid = cookie["sid"];
-                if (!sid) {
-                    await handleTimeout(store, next, req, res, ctx, opts);
-                    return;
-                }
-                // split sid into plain id + mac
-                const [rawID, mac] = sid.split(".", 2);
-                if (!rawID || !mac) {
-                    res.statusCode = 400;
-                    res.end();
-                    return;
-                }
-                // verify mac
-                // TODO: mv to fn that throws BadRequestError,
-                // or use regex test to verify isHex
-                const generatedMAC = createHmac("sha256", opts.secret)
-                    .update(rawID, "hex")
-                    .digest("hex");
-                if (mac !== generatedMAC) {
-                    res.statusCode = 400;
-                    res.end();
-                    return;
-                }
-                // read session from store
-                const sessionString = await store.read(sid);
-                if (!sessionString) {
-                    await handleTimeout(store, next, req, res, ctx, opts);
-                    return;
-                }
-                ctx.session = JSON.parse(sessionString);
-                // handle request
-                await next(req, res, ctx);
-                if (res.headersSent) {
-                    return;
-                }
-                // check for session updates
-                updateSession(store, sessionString, ctx, opts).catch(console.error);
-            }
-            catch (error) {
-                console.error(error);
-                res.statusCode = 501;
-                res.end();
-            }
-        };
+import { sessionManager } from "./helpers/SessionManager.js";
+function use(next) {
+    return async (req, res, ctx) => {
+        // @ts-ignore
+        const [id, sig] = sessionManager.parseSID(this.config.secret, req);
+        // @ts-ignore
+        const [sessionData, err] = await this.config.store.get(id);
+        if (err) {
+            this.config.log(err.code, err.name, err.message);
+            res.statusCode = 501;
+            res.end();
+            return;
+        }
+        await next(req, res, ctx);
+    };
+}
+export class SessionError extends Error {
+    code;
+    constructor(msg, code, opts) {
+        super(msg, opts);
+        this.code = code;
     }
+}
+export function Session(config) {
     return {
+        config,
         use,
     };
 }
-export { Session };
