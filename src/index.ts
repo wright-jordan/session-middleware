@@ -1,90 +1,61 @@
 import type * as tsHTTP from "ts-http";
-import { parse } from "cookie";
-import { createHmac } from "crypto";
-import type * as _ from "cookies-middleware";
-import type { SessionOptions, SessionData, Store } from "./types.js";
-import { updateSession } from "./helpers/updateSession.js";
-import { handleTimeout } from "./helpers/handleTimeout.js";
+import { sessionManager } from "./helpers/SessionManager.js";
 
 declare module "ts-http" {
   interface Context {
-    session: SessionData;
+    sessionID: string;
+    sessionData: SessionData;
   }
 }
 
-function Session(store: Store, opts: SessionOptions) {
-  function use(next: tsHTTP.Handler): tsHTTP.Handler {
-    return async function sessionMiddleware(req, res, ctx) {
-      try {
-        // get cookie header and parse
-        const cookieString = req.headers.cookie;
-        if (!cookieString) {
-          await handleTimeout(store, next, req, res, ctx, opts);
-          return;
-        }
-        const cookie = parse(cookieString);
-
-        // get sid from cookie object
-        const sid = cookie["sid"];
-        if (!sid) {
-          await handleTimeout(store, next, req, res, ctx, opts);
-          return;
-        }
-
-        // split sid into plain id + mac
-        const [rawID, mac] = sid.split(".", 2);
-        if (!rawID || !mac) {
-          res.statusCode = 400;
-          res.end();
-          return;
-        }
-
-        // check if id is 22 character base64url string
-        const isValidID = /^[A-Za-z0-9_-]{22}$/.test(rawID);
-        if (!isValidID) {
-          res.statusCode = 400;
-          res.end();
-          return;
-        }
-
-        // verify mac matches
-        const generatedMAC = createHmac("sha256", opts.secret)
-          .update(rawID, "base64url")
-          .digest("base64url");
-        if (mac !== generatedMAC) {
-          res.statusCode = 400;
-          res.end();
-          return;
-        }
-
-        // read session from store
-        const sessionString = await store.read(sid);
-        if (!sessionString) {
-          await handleTimeout(store, next, req, res, ctx, opts);
-          return;
-        }
-        ctx.session = JSON.parse(sessionString) as SessionData;
-
-        // handle request
-        await next(req, res, ctx);
-        if (res.headersSent) {
-          return;
-        }
-
-        // check for session updates
-        updateSession(store, sessionString, ctx, opts).catch(console.error);
-      } catch (error) {
-        console.error(error);
-        res.statusCode = 501;
-        res.end();
-      }
-    };
-  }
-
-  return {
-    use,
+function use(this: SessionMiddleware, next: tsHTTP.Handler): tsHTTP.Handler {
+  return async (req, res, ctx) => {
+    // @ts-ignore
+    const [id, sig] = sessionManager.parseSID(this.config.secret, req);
+    // @ts-ignore
+    const [sessionData, err] = await this.config.store.get(id);
+    if (err) {
+      this.config.log(err.code, err.name, err.message);
+      res.statusCode = 501;
+      res.end();
+      return;
+    }
+    await next(req, res, ctx);
   };
 }
 
-export { SessionData, Store, SessionOptions };
-export { Session };
+export type SessionErrorCode = "Store#get" | "Store#set";
+export class SessionError extends Error {
+  code: SessionErrorCode;
+  constructor(msg: string, code: SessionErrorCode, opts: ErrorOptions) {
+    super(msg, opts);
+    this.code = code;
+  }
+}
+
+export interface SessionData {
+  _absoluteDeadline: number;
+}
+
+export interface SessionStore {
+  get(id: string): Promise<[SessionData, SessionError | null]>;
+  set(id: string, sess: SessionData): Promise<SessionError | null>;
+}
+
+export interface SessionConfig {
+  secret: Buffer;
+  store: SessionStore;
+  log(...v: unknown[]): void;
+}
+
+export interface SessionMiddleware {
+  config: SessionConfig;
+  use(this: SessionMiddleware, next: tsHTTP.Handler): tsHTTP.Handler;
+}
+
+export function Session(config: SessionConfig): SessionMiddleware {
+  return {
+    config,
+    use,
+  };
+}
