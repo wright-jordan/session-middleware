@@ -1,23 +1,23 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
-/** Validates an HMAC-SHA256 signature. Expects both parameters to be hex-encoded strings. */
+/** Validates a hex encoded HMAC-SHA256 signature. */
 export function checkSig(
   signedID: string,
   secret: Buffer
-): [id: string, sig: string, ok: boolean] {
+): { id: string; ok: boolean } {
   try {
     const [id, sig] = signedID.split(".", 2);
     if (!id || !sig) {
-      return ["", "", false];
+      return { id: "", ok: false };
     }
     const generatedSig = createHmac("sha256", secret)
       .update(id, "hex")
       .digest();
     if (!timingSafeEqual(Buffer.from(sig, "hex"), generatedSig)) {
-      return ["", "", false];
+      return { id: "", ok: false };
     }
-    return [id, sig, true];
+    return { id, ok: true };
   } catch (error) {
-    return ["", "", false];
+    return { id: "", ok: false };
   }
 }

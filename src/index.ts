@@ -1,36 +1,54 @@
 import type * as tsHTTP from "ts-http";
 import { sessionManager } from "./helpers/SessionManager.js";
+import {
+  NewSessionError,
+  SessionError,
+  StoreGetError,
+  StoreSetError,
+} from "./errors.js";
+import { createHmac } from "crypto";
 
 declare module "ts-http" {
   interface Context {
-    sessionID: string;
-    sessionData: SessionData;
+    session: Session;
   }
+}
+
+interface Session {
+  id: string;
+  data: SessionData;
+  errors: SessionError[];
 }
 
 function use(this: SessionMiddleware, next: tsHTTP.Handler): tsHTTP.Handler {
   return async (req, res, ctx) => {
-    // @ts-ignore
-    const [id, sig] = sessionManager.parseSID(this.config.secret, req);
-    // @ts-ignore
-    const [sessionData, err] = await this.config.store.get(id);
-    if (err) {
-      this.config.log(err.code, err.name, err.message);
-      res.statusCode = 501;
-      res.end();
-      return;
+    const parseSIDResult = await sessionManager.parseSID(
+      this.config.secret,
+      req
+    );
+    if (parseSIDResult.errors.length > 0) {
+      ctx.session.errors = ctx.session.errors.concat(parseSIDResult.errors);
+      for (const err of ctx.session.errors) {
+        if (err instanceof NewSessionError) {
+          await next(req, res, ctx);
+          return;
+        }
+      }
+    }
+    const storeGetResult = await this.config.store.get(parseSIDResult.id);
+    ctx.session.id = parseSIDResult.id;
+    ctx.session.data = storeGetResult.data;
+    if (storeGetResult.err) {
+      ctx.session.errors.push(storeGetResult.err);
     }
     await next(req, res, ctx);
+    if (res.headersSent) {
+      return;
+    }
+    const sig = createHmac("sha256", this.config.secret)
+      .update(ctx.session.id, "hex")
+      .digest("hex");
   };
-}
-
-export type SessionErrorCode = "Store#get" | "Store#set";
-export class SessionError extends Error {
-  code: SessionErrorCode;
-  constructor(msg: string, code: SessionErrorCode, opts: ErrorOptions) {
-    super(msg, opts);
-    this.code = code;
-  }
 }
 
 export interface SessionData {
@@ -38,14 +56,15 @@ export interface SessionData {
 }
 
 export interface SessionStore {
-  get(id: string): Promise<[SessionData, SessionError | null]>;
-  set(id: string, sess: SessionData): Promise<SessionError | null>;
+  get(id: string): Promise<{ data: SessionData; err: StoreGetError | null }>;
+  set(id: string, sess: SessionData): Promise<StoreSetError | null>;
 }
 
 export interface SessionConfig {
+  idleTimeout: number;
+  absoluteTimeout: number;
   secret: Buffer;
   store: SessionStore;
-  log(...v: unknown[]): void;
 }
 
 export interface SessionMiddleware {
