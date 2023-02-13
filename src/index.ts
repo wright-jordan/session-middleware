@@ -60,6 +60,7 @@ export interface SessionStore {
   set(id: string, sess: SessionData): Promise<StoreSetError | null>;
 }
 
+// TODO: change secret to a Buffer[] that uses the last secret in the array for new hmacs and checks received hmacs from last to first.
 export interface SessionConfig {
   idleTimeout: number;
   absoluteTimeout: number;
