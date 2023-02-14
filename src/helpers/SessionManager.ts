@@ -6,7 +6,7 @@ import { BadSigError, NewSessionError, SessionError } from "../errors.js";
 import type * as _ from "cookies-middleware";
 
 async function parseSID(
-  secret: Buffer,
+  secrets: Buffer[],
   req: IncomingMessage
 ): Promise<{ id: string; errors: SessionError[] }> {
   const cookieHeader = req.headers["cookie"];
@@ -26,17 +26,19 @@ async function parseSID(
     }
     return { id, errors: [] };
   }
-  const { id, ok } = checkSig(signedID, secret);
-  if (!ok) {
-    const errors: SessionError[] = [new BadSigError(null)];
-    const { id, err } = await newSessionID();
-    if (err) {
-      errors.push(err);
-      return { id, errors };
+  for (const secret of secrets) {
+    const checkSigResult = checkSig(signedID, secret);
+    if (checkSigResult.ok) {
+      return { id: checkSigResult.id, errors: [] };
     }
+  }
+  const errors: SessionError[] = [new BadSigError(null)];
+  const { id, err } = await newSessionID();
+  if (err) {
+    errors.push(err);
     return { id, errors };
   }
-  return { id, errors: [] };
+  return { id, errors };
 }
 
 async function newSessionID(): Promise<{

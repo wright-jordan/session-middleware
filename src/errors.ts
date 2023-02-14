@@ -22,6 +22,12 @@ export class StoreSetError extends SessionError {
   }
 }
 
+export class StoreDeleteError extends SessionError {
+  constructor(opts: ErrorOptions) {
+    super(opts);
+  }
+}
+
 export class NewSessionError extends SessionError {
   constructor(opts: ErrorOptions | null) {
     super(opts);
