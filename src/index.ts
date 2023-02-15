@@ -11,6 +11,7 @@ import { isDeepStrictEqual } from "util";
 import cookie from "cookie";
 import { newSig } from "./helpers/newSig.js";
 import type * as _ from "cookies-middleware";
+import type { IncomingMessage } from "http";
 
 declare module "ts-http" {
   interface Context {
@@ -41,11 +42,13 @@ function use(this: SessionMiddleware, next: tsHTTP.Handler): tsHTTP.Handler {
       this.config.idleTimeout,
       this.config.absoluteTimeout
     );
-    ctx.session.id = parseSIDResult.id;
-    ctx.session.data = structuredClone(storeGetResult.data);
     if (storeGetResult.err) {
       ctx.session.errors.push(storeGetResult.err);
+      await next(req, res, ctx);
+      return;
     }
+    ctx.session.id = parseSIDResult.id;
+    ctx.session.data = structuredClone(storeGetResult.data);
     await next(req, res, ctx);
     if (res.headersSent) {
       return;
@@ -55,7 +58,7 @@ function use(this: SessionMiddleware, next: tsHTTP.Handler): tsHTTP.Handler {
       isOldSig = true;
       const err = await this.config.store.delete(parseSIDResult.id);
       if (err) {
-        this.config.handleStoreDeleteError(err);
+        this.config.handleStoreDeleteError(req, err);
       }
     }
     // Note: regenerated session id won't be saved unless session data is modified.
@@ -66,7 +69,7 @@ function use(this: SessionMiddleware, next: tsHTTP.Handler): tsHTTP.Handler {
         this.config.idleTimeout
       );
       if (err) {
-        this.config.handleStoreSetError(err);
+        this.config.handleStoreSetError(req, err);
       }
     }
     const cookieString = cookie.serialize(
@@ -119,8 +122,8 @@ export interface SessionConfig {
   absoluteTimeout: number;
   secrets: Buffer[];
   store: SessionStore;
-  handleStoreSetError: (err: StoreSetError) => void;
-  handleStoreDeleteError: (err: StoreDeleteError) => void;
+  handleStoreSetError: (req: IncomingMessage, err: StoreSetError) => void;
+  handleStoreDeleteError: (req: IncomingMessage, err: StoreDeleteError) => void;
 }
 
 export interface SessionMiddleware {
