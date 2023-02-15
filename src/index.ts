@@ -17,5 +17,6 @@ declare module "ts-http" {
   }
 }
 
+// TODO: export error classes
 export { SessionConfig, SessionData, SessionMiddleware, SessionStore };
 export { Session };
