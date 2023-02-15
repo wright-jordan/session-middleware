@@ -1,62 +1,49 @@
 import type { IncomingMessage } from "http";
 import { checkSig } from "./checkSig.js";
 import { parse } from "cookie";
-import { randomBytes } from "crypto";
-import { BadSigError, NewSessionError, SessionError } from "../errors.js";
+import { BadSigError, SessionError } from "../errors.js";
 import type * as _ from "cookies-middleware";
+import { newSig } from "./newSig.js";
+import { newSessionID } from "./newSessionID.js";
 
 async function parseSID(
   secrets: Buffer[],
   req: IncomingMessage
-): Promise<{ id: string; errors: SessionError[] }> {
+): Promise<{ id: string; sig: string; errors: SessionError[] }> {
   const cookieHeader = req.headers["cookie"];
   if (!cookieHeader) {
     const { id, err } = await newSessionID();
     if (err) {
-      return { id, errors: [err] };
+      return { id, sig: "", errors: [err] };
     }
-    return { id, errors: [] };
+    return { id, sig: newSig(id, secrets[0]!), errors: [] };
   }
   const cookies = parse(cookieHeader);
   const signedID = cookies["sid"];
   if (!signedID) {
     const { id, err } = await newSessionID();
     if (err) {
-      return { id, errors: [err] };
+      return { id, sig: "", errors: [err] };
     }
-    return { id, errors: [] };
+    return { id, sig: newSig(id, secrets[0]!), errors: [] };
   }
-  for (const secret of secrets) {
-    const checkSigResult = checkSig(signedID, secret);
+  let sig: string = "";
+  for (let i = 0; i < secrets.length; i++) {
+    const checkSigResult = checkSig(signedID, secrets[i]!);
+    if (i === 0) {
+      sig = checkSigResult.sig;
+    }
     if (checkSigResult.ok) {
-      return { id: checkSigResult.id, errors: [] };
+      return { id: checkSigResult.id, sig, errors: [] };
     }
   }
   const errors: SessionError[] = [new BadSigError(null)];
   const { id, err } = await newSessionID();
   if (err) {
     errors.push(err);
-    return { id, errors };
+    return { id, sig: "", errors };
   }
-  return { id, errors };
-}
-
-async function newSessionID(): Promise<{
-  id: string;
-  err: NewSessionError | null;
-}> {
-  return new Promise<{
-    id: string;
-    err: NewSessionError | null;
-  }>((resolve) => {
-    randomBytes(16, (err, buf) => {
-      if (err) {
-        resolve({ id: "", err: new NewSessionError({ cause: err }) });
-        return;
-      }
-      resolve({ id: buf.toString("hex"), err: null });
-    });
-  });
+  return { id, sig: newSig(id, secrets[0]!), errors };
 }
 
 interface SessionManager {

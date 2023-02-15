@@ -23,7 +23,7 @@ export class StoreDeleteError extends SessionError {
         super(opts);
     }
 }
-export class NewSessionError extends SessionError {
+export class SessionIDGenError extends SessionError {
     constructor(opts) {
         super(opts);
     }

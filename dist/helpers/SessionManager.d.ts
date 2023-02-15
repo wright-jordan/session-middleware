@@ -4,6 +4,7 @@ import type { IncomingMessage } from "http";
 import { SessionError } from "../errors.js";
 declare function parseSID(secrets: Buffer[], req: IncomingMessage): Promise<{
     id: string;
+    sig: string;
     errors: SessionError[];
 }>;
 interface SessionManager {

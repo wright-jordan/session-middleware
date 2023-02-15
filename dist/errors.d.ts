@@ -13,6 +13,6 @@ export declare class StoreSetError extends SessionError {
 export declare class StoreDeleteError extends SessionError {
     constructor(opts: ErrorOptions);
 }
-export declare class NewSessionError extends SessionError {
+export declare class SessionIDGenError extends SessionError {
     constructor(opts: ErrorOptions | null);
 }

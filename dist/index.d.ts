@@ -15,11 +15,11 @@ export interface SessionData {
     _absoluteDeadline: number;
 }
 export interface SessionStore {
-    get(id: string, idleTimeout: number): Promise<{
+    get(id: string, ttl: number, absoluteTimeout: number): Promise<{
         data: SessionData;
         err: StoreGetError | null;
     }>;
-    set(id: string, sess: SessionData, absoluteTimeout: number): Promise<StoreSetError | null>;
+    set(id: string, sess: SessionData, ttl: number): Promise<StoreSetError | null>;
     delete(id: string): Promise<StoreDeleteError | null>;
 }
 export interface SessionConfig {
@@ -32,7 +32,7 @@ export interface SessionConfig {
     };
     idleTimeout: number;
     absoluteTimeout: number;
-    secrets: [Buffer, Buffer];
+    secrets: Buffer[];
     store: SessionStore;
     handleStoreSetError: (err: StoreSetError) => void;
     handleStoreDeleteError: (err: StoreDeleteError) => void;

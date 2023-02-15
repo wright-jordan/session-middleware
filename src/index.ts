@@ -1,15 +1,15 @@
 import type * as tsHTTP from "ts-http";
 import { sessionManager } from "./helpers/SessionManager.js";
 import {
-  NewSessionError,
+  SessionIDGenError,
   SessionError,
   StoreDeleteError,
   StoreGetError,
   StoreSetError,
 } from "./errors.js";
-import { createHmac } from "crypto";
 import { isDeepStrictEqual } from "util";
 import cookie from "cookie";
+import { newSig } from "./helpers/newSig.js";
 
 declare module "ts-http" {
   interface Context {
@@ -32,7 +32,7 @@ function use(this: SessionMiddleware, next: tsHTTP.Handler): tsHTTP.Handler {
     if (parseSIDResult.errors.length > 0) {
       ctx.session.errors = ctx.session.errors.concat(parseSIDResult.errors);
       for (const err of ctx.session.errors) {
-        if (err instanceof NewSessionError) {
+        if (err instanceof SessionIDGenError) {
           await next(req, res, ctx);
           return;
         }
@@ -40,7 +40,8 @@ function use(this: SessionMiddleware, next: tsHTTP.Handler): tsHTTP.Handler {
     }
     const storeGetResult = await this.config.store.get(
       parseSIDResult.id,
-      this.config.idleTimeout
+      this.config.idleTimeout,
+      this.config.absoluteTimeout
     );
     ctx.session.id = parseSIDResult.id;
     ctx.session.data = structuredClone(storeGetResult.data);
@@ -51,32 +52,32 @@ function use(this: SessionMiddleware, next: tsHTTP.Handler): tsHTTP.Handler {
     if (res.headersSent) {
       return;
     }
-
+    let isOldSig: boolean = false;
     if (ctx.session.id !== parseSIDResult.id) {
+      isOldSig = true;
       const err = await this.config.store.delete(parseSIDResult.id);
       if (err) {
         this.config.handleStoreDeleteError(err);
       }
     }
-    if (
-      ctx.session.id !== parseSIDResult.id ||
-      !isDeepStrictEqual(ctx.session.data, storeGetResult.data)
-    ) {
+    // Note: regenerated session id won't be saved unless session data is modified.
+    if (!isDeepStrictEqual(ctx.session.data, storeGetResult.data)) {
       const err = await this.config.store.set(
         ctx.session.id,
         ctx.session.data,
-        this.config.absoluteTimeout
+        this.config.idleTimeout
       );
       if (err) {
         this.config.handleStoreSetError(err);
       }
     }
-    const sig = createHmac("sha256", this.config.secrets[0])
-      .update(ctx.session.id, "hex")
-      .digest("hex");
     const cookieString = cookie.serialize(
       this.config.cookie.name,
-      `${ctx.session.id}.${sig}`,
+      `${ctx.session.id}.${
+        isOldSig
+          ? newSig(ctx.session.id, this.config.secrets[0]!)
+          : parseSIDResult.sig
+      }`,
       {
         domain: this.config.cookie.domain,
         httpOnly: true,
@@ -97,12 +98,13 @@ export interface SessionData {
 export interface SessionStore {
   get(
     id: string,
-    idleTimeout: number
+    ttl: number,
+    absoluteTimeout: number
   ): Promise<{ data: SessionData; err: StoreGetError | null }>;
   set(
     id: string,
     sess: SessionData,
-    absoluteTimeout: number
+    ttl: number
   ): Promise<StoreSetError | null>;
   delete(id: string): Promise<StoreDeleteError | null>;
 }
@@ -117,7 +119,7 @@ export interface SessionConfig {
   };
   idleTimeout: number;
   absoluteTimeout: number;
-  secrets: [Buffer, Buffer];
+  secrets: Buffer[];
   store: SessionStore;
   handleStoreSetError: (err: StoreSetError) => void;
   handleStoreDeleteError: (err: StoreDeleteError) => void;
