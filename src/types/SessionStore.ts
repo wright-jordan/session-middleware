@@ -5,7 +5,7 @@ import type {
   StoreSetError,
 } from "../errors.js";
 
-// If store can't locate ID, then return null.
+// If store.get can't locate ID, then return null.
 // Use.js should then set SessionData.absoluteDeadline.
 // SessionContext has already set SessionData to a default value. 
 export interface SessionStore {
