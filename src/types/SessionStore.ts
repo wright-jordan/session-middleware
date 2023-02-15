@@ -15,7 +15,7 @@ export interface SessionStore {
   ): Promise<{ data: SessionData; err: StoreGetError | null }>;
   set(
     id: string,
-    sess: SessionData,
+    data: SessionData,
     ttl: number
   ): Promise<StoreSetError | null>;
   delete(id: string): Promise<StoreDeleteError | null>;
