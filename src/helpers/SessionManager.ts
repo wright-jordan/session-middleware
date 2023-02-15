@@ -6,6 +6,7 @@ import type * as _ from "cookies-middleware";
 import { newSig } from "./newSig.js";
 import { newSessionID } from "./newSessionID.js";
 
+// TODO: SessionManager is unnecessary, just export parseSID.
 async function parseSID(
   secrets: Buffer[],
   req: IncomingMessage
