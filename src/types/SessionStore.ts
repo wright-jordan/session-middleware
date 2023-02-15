@@ -5,11 +5,13 @@ import type {
   StoreSetError,
 } from "../errors.js";
 
+// If store can't locate ID, then return null.
+// Use.js should then set SessionData.absoluteDeadline.
+// SessionContext has already set SessionData to a default value. 
 export interface SessionStore {
   get(
     id: string,
-    ttl: number,
-    absoluteTimeout: number
+    ttl: number
   ): Promise<{ data: SessionData; err: StoreGetError | null }>;
   set(
     id: string,
