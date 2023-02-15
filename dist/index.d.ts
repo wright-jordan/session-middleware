@@ -1,45 +1,18 @@
-/// <reference types="node" />
-import type * as tsHTTP from "ts-http";
-import { SessionError, StoreDeleteError, StoreGetError, StoreSetError } from "./errors.js";
-declare module "ts-http" {
-    interface Context {
-        session: Session;
-    }
-}
-interface Session {
+import type { SessionError } from "./errors.js";
+import type { SessionData } from "./types/SessionData.js";
+import type { SessionConfig } from "./types/SessionConfig.js";
+import type { SessionMiddleware } from "./types/SessionMiddleware.js";
+import type { SessionStore } from "./types/SessionStore.js";
+import { Session } from "./Session.js";
+interface SessionContext {
     id: string;
     data: SessionData;
     errors: SessionError[];
 }
-export interface SessionData {
-    absoluteDeadline: number;
+declare module "ts-http" {
+    interface Context {
+        session: SessionContext;
+    }
 }
-export interface SessionStore {
-    get(id: string, ttl: number, absoluteTimeout: number): Promise<{
-        data: SessionData;
-        err: StoreGetError | null;
-    }>;
-    set(id: string, sess: SessionData, ttl: number): Promise<StoreSetError | null>;
-    delete(id: string): Promise<StoreDeleteError | null>;
-}
-export interface SessionConfig {
-    cookie: {
-        name: string;
-        domain?: string;
-        path?: string;
-        sameSite: "lax" | "strict";
-        secure: boolean;
-    };
-    idleTimeout: number;
-    absoluteTimeout: number;
-    secrets: Buffer[];
-    store: SessionStore;
-    handleStoreSetError: (err: StoreSetError) => void;
-    handleStoreDeleteError: (err: StoreDeleteError) => void;
-}
-export interface SessionMiddleware {
-    config: SessionConfig;
-    use(this: SessionMiddleware, next: tsHTTP.Handler): tsHTTP.Handler;
-}
-export declare function Session(config: SessionConfig): SessionMiddleware;
-export {};
+export { SessionConfig, SessionData, SessionMiddleware, SessionStore };
+export { Session };

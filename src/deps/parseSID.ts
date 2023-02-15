@@ -1,9 +1,9 @@
 import type { IncomingMessage } from "http";
-import { checkSig } from "./checkSig.js";
+import { checkSig } from "../helpers/checkSig.js";
 import { parse } from "cookie";
 import { BadSigError, SessionError } from "../errors.js";
-import { newSig } from "./newSig.js";
-import { newSessionID } from "./newSessionID.js";
+import { newSig } from "../helpers/newSig.js";
+import { newSessionID } from "../helpers/newSessionID.js";
 
 export async function parseSID(
   secrets: Buffer[],
