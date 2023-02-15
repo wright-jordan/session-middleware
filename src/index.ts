@@ -1,5 +1,5 @@
 import type * as tsHTTP from "ts-http";
-import { sessionManager } from "./helpers/SessionManager.js";
+import { parseSID } from "./helpers/parseSID.js";
 import {
   SessionIDGenError,
   SessionError,
@@ -10,6 +10,7 @@ import {
 import { isDeepStrictEqual } from "util";
 import cookie from "cookie";
 import { newSig } from "./helpers/newSig.js";
+import type * as _ from "cookies-middleware";
 
 declare module "ts-http" {
   interface Context {
@@ -25,12 +26,9 @@ interface Session {
 
 function use(this: SessionMiddleware, next: tsHTTP.Handler): tsHTTP.Handler {
   return async (req, res, ctx) => {
-    const parseSIDResult = await sessionManager.parseSID(
-      this.config.secrets,
-      req
-    );
+    const parseSIDResult = await parseSID(this.config.secrets, req);
     if (parseSIDResult.errors.length > 0) {
-      ctx.session.errors = ctx.session.errors.concat(parseSIDResult.errors);
+      ctx.session.errors = structuredClone(parseSIDResult.errors);
       for (const err of ctx.session.errors) {
         if (err instanceof SessionIDGenError) {
           await next(req, res, ctx);
@@ -92,7 +90,7 @@ function use(this: SessionMiddleware, next: tsHTTP.Handler): tsHTTP.Handler {
 }
 
 export interface SessionData {
-  _absoluteDeadline: number;
+  absoluteDeadline: number;
 }
 
 export interface SessionStore {

@@ -12,7 +12,7 @@ interface Session {
     errors: SessionError[];
 }
 export interface SessionData {
-    _absoluteDeadline: number;
+    absoluteDeadline: number;
 }
 export interface SessionStore {
     get(id: string, ttl: number, absoluteTimeout: number): Promise<{

@@ -3,7 +3,7 @@ import { parse } from "cookie";
 import { BadSigError } from "../errors.js";
 import { newSig } from "./newSig.js";
 import { newSessionID } from "./newSessionID.js";
-async function parseSID(secrets, req) {
+export async function parseSID(secrets, req) {
     const cookieHeader = req.headers["cookie"];
     if (!cookieHeader) {
         const { id, err } = await newSessionID();
@@ -39,6 +39,3 @@ async function parseSID(secrets, req) {
     }
     return { id, sig: newSig(id, secrets[0]), errors };
 }
-export const sessionManager = {
-    parseSID,
-};

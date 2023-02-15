@@ -2,12 +2,10 @@ import type { IncomingMessage } from "http";
 import { checkSig } from "./checkSig.js";
 import { parse } from "cookie";
 import { BadSigError, SessionError } from "../errors.js";
-import type * as _ from "cookies-middleware";
 import { newSig } from "./newSig.js";
 import { newSessionID } from "./newSessionID.js";
 
-// TODO: SessionManager is unnecessary, just export parseSID.
-async function parseSID(
+export async function parseSID(
   secrets: Buffer[],
   req: IncomingMessage
 ): Promise<{ id: string; sig: string; errors: SessionError[] }> {
@@ -46,11 +44,3 @@ async function parseSID(
   }
   return { id, sig: newSig(id, secrets[0]!), errors };
 }
-
-interface SessionManager {
-  parseSID: typeof parseSID;
-}
-
-export const sessionManager: SessionManager = {
-  parseSID,
-};
