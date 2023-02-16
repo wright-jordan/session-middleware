@@ -25,8 +25,7 @@ export function Use(deps: { parseSID: typeof parseSID }) {
       }
       const storeGetResult = await this.config.store.get(
         parseSIDResult.id,
-        this.config.idleTimeout,
-        this.config.absoluteTimeout
+        this.config.idleTimeout
       );
       if (storeGetResult.err) {
         ctx.session.errors.push(storeGetResult.err);
@@ -34,7 +33,12 @@ export function Use(deps: { parseSID: typeof parseSID }) {
         return;
       }
       ctx.session.id = parseSIDResult.id;
-      ctx.session.data = structuredClone(storeGetResult.data);
+      if (!storeGetResult.data) {
+        ctx.session.data.absoluteDeadline =
+          Math.floor(Date.now() / 1000) + this.config.absoluteTimeout;
+      } else {
+        ctx.session.data = structuredClone(storeGetResult.data);
+      }
       await next(req, res, ctx);
       if (res.headersSent) {
         return;

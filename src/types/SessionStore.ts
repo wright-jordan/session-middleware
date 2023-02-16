@@ -7,12 +7,12 @@ import type {
 
 // If store.get can't locate ID, then return null.
 // Use.js should then set SessionData.absoluteDeadline.
-// SessionContext has already set SessionData to a default value. 
+// SessionContext has already set SessionData to a default value.
 export interface SessionStore {
   get(
     id: string,
     ttl: number
-  ): Promise<{ data: SessionData; err: StoreGetError | null }>;
+  ): Promise<{ data: SessionData | null; err: StoreGetError | null }>;
   set(
     id: string,
     data: SessionData,
