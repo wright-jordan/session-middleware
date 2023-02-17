@@ -1,5 +1,4 @@
 import { createHmac, timingSafeEqual } from "crypto";
-/** Validates a hex encoded HMAC-SHA256 signature. */
 export function checkSig(signedID, secret) {
     try {
         const [id, sig] = signedID.split(".", 2);
