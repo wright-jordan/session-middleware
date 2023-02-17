@@ -16,14 +16,20 @@ export function Use(deps) {
                     }
                 }
             }
-            const storeGetResult = await this.config.store.get(parseSIDResult.id, this.config.idleTimeout, this.config.absoluteTimeout);
+            const storeGetResult = await this.config.store.get(parseSIDResult.id, this.config.idleTimeout);
             if (storeGetResult.err) {
                 ctx.session.errors.push(storeGetResult.err);
                 await next(req, res, ctx);
                 return;
             }
             ctx.session.id = parseSIDResult.id;
-            ctx.session.data = structuredClone(storeGetResult.data);
+            if (!storeGetResult.data) {
+                ctx.session.data.absoluteDeadline =
+                    Math.floor(Date.now() / 1000) + this.config.absoluteTimeout;
+            }
+            else {
+                ctx.session.data = structuredClone(storeGetResult.data);
+            }
             await next(req, res, ctx);
             if (res.headersSent) {
                 return;
@@ -36,7 +42,6 @@ export function Use(deps) {
                     this.config.handleStoreDeleteError(req, err);
                 }
             }
-            // Note: regenerated session id won't be saved unless session data is modified.
             if (!isDeepStrictEqual(ctx.session.data, storeGetResult.data)) {
                 const err = await this.config.store.set(ctx.session.id, ctx.session.data, this.config.idleTimeout);
                 if (err) {
@@ -48,7 +53,7 @@ export function Use(deps) {
                 : parseSIDResult.sig}`, {
                 domain: this.config.cookie.domain,
                 httpOnly: true,
-                maxAge: 60 * 60 * 24 * 365,
+                maxAge: 60 * 60 * 24 * 400,
                 path: this.config.cookie.path,
                 sameSite: this.config.cookie.sameSite,
                 secure: this.config.cookie.secure,

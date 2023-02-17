@@ -51,7 +51,6 @@ export function Use(deps: { parseSID: typeof parseSID }) {
           this.config.handleStoreDeleteError(req, err);
         }
       }
-      // Note: regenerated session id won't be saved unless session data is modified.
       if (!isDeepStrictEqual(ctx.session.data, storeGetResult.data)) {
         const err = await this.config.store.set(
           ctx.session.id,
@@ -72,7 +71,7 @@ export function Use(deps: { parseSID: typeof parseSID }) {
         {
           domain: this.config.cookie.domain,
           httpOnly: true,
-          maxAge: 60 * 60 * 24 * 365,
+          maxAge: 60 * 60 * 24 * 400,
           path: this.config.cookie.path,
           sameSite: this.config.cookie.sameSite,
           secure: this.config.cookie.secure,
