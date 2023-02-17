@@ -36,6 +36,7 @@ export function Use(deps: { parseSID: typeof parseSID }) {
       if (!storeGetResult.data) {
         ctx.session.data.absoluteDeadline =
           Math.floor(Date.now() / 1000) + this.config.absoluteTimeout;
+        storeGetResult.data = structuredClone(ctx.session.data);
       } else {
         ctx.session.data = structuredClone(storeGetResult.data);
       }
