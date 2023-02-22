@@ -23,13 +23,13 @@ export function Use(deps) {
                 return;
             }
             ctx.session.id = parseSIDResult.id;
-            if (!storeGetResult.data) {
+            if (storeGetResult.data) {
+                ctx.session.data = structuredClone(storeGetResult.data);
+            }
+            else {
                 ctx.session.data.absoluteDeadline =
                     Math.floor(Date.now() / 1000) + this.config.absoluteTimeout;
                 storeGetResult.data = structuredClone(ctx.session.data);
-            }
-            else {
-                ctx.session.data = structuredClone(storeGetResult.data);
             }
             await next(req, res, ctx);
             if (res.headersSent) {
