@@ -26,6 +26,8 @@ export async function parseSID(
     }
     return { id, sig: newSig(id, secrets[0]!), errors: [] };
   }
+  // Validate signedID and do first checkSig here.
+  // Save the new sig, and if it is a match, return.
   let sig: string = "";
   for (let i = 0; i < secrets.length; i++) {
     const checkSigResult = checkSig(signedID, secrets[i]!);
