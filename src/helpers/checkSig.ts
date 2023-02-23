@@ -5,8 +5,8 @@ export function checkSig(
   secret: Buffer
 ): { id: string; sig: string; ok: boolean } {
   try {
-   // TODO, maybe: this check should be moved to parseSID,
-   // so that a sig is always returned.
+   // TODO: check should be moved to parseSID,
+   // don't iterate on something that never passes.
     const [id, sig] = signedID.split(".", 2);
     if (!id || !sig) {
       return { id: "", sig: "", ok: false };
@@ -20,6 +20,8 @@ export function checkSig(
     }
     return { id, sig, ok: true };
   } catch (error) {
+    // Validate hex encoding and byte lengths before checkSig loop.
+    // Don't iterate on something that will never pass.
     return { id: "", sig: "", ok: false };
   }
 }
