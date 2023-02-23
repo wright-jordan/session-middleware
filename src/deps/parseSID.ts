@@ -5,6 +5,8 @@ import { BadSigError, SessionError } from "../errors.js";
 import { newSig } from "../helpers/newSig.js";
 import { newSessionID } from "../helpers/newSessionID.js";
 
+// TODO: return an isNew flag,
+// so that newly generated ids are not searched for in store
 export async function parseSID(
   secrets: Buffer[],
   req: IncomingMessage
