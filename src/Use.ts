@@ -23,6 +23,7 @@ export function Use(deps: { parseSID: typeof parseSID }) {
           }
         }
       }
+      // If newSession don't use store.
       const storeGetResult = await this.config.store.get(
         parseSIDResult.id,
         this.config.idleTimeout
