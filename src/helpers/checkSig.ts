@@ -5,6 +5,8 @@ export function checkSig(
   secret: Buffer
 ): { id: string; sig: string; ok: boolean } {
   try {
+   // TODO, maybe: this check should be moved to parseSID,
+   // so that a sig is always returned.
     const [id, sig] = signedID.split(".", 2);
     if (!id || !sig) {
       return { id: "", sig: "", ok: false };
