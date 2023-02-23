@@ -12,6 +12,7 @@ export function checkSig(
     const generatedSig = createHmac("sha256", secret)
       .update(id, "hex")
       .digest();
+    // TODO: generatedSig should be returned.
     if (!timingSafeEqual(Buffer.from(sig, "hex"), generatedSig)) {
       return { id: "", sig: "", ok: false };
     }
