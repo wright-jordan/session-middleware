@@ -6,6 +6,7 @@ import { isDeepStrictEqual } from "util";
 import cookie from "cookie";
 import { newSig } from "./helpers/newSig.js";
 import * as _ from "cookies-middleware";
+import type { SessionData } from "./types/SessionData.js";
 
 export function Use(deps: { parseSID: typeof parseSID }) {
   return function use(
@@ -23,23 +24,29 @@ export function Use(deps: { parseSID: typeof parseSID }) {
           }
         }
       }
-      // If newSession don't use store.
-      const storeGetResult = await this.config.store.get(
-        parseSIDResult.id,
-        this.config.idleTimeout
-      );
-      if (storeGetResult.err) {
-        ctx.session.errors.push(storeGetResult.err);
-        await next(req, res, ctx);
-        return;
+      let storeGetResult: Awaited<
+        ReturnType<typeof this.config.store.get>
+      > | null = null;
+      if (!parseSIDResult.isNew) {
+        storeGetResult = await this.config.store.get(
+          parseSIDResult.id,
+          this.config.idleTimeout
+        );
+        if (storeGetResult.err) {
+          ctx.session.errors.push(storeGetResult.err);
+          await next(req, res, ctx);
+          return;
+        }
       }
       ctx.session.id = parseSIDResult.id;
-      if (storeGetResult.data) {
-        ctx.session.data = structuredClone(storeGetResult.data);
+      let oldData: SessionData | null = null;
+      if (storeGetResult && storeGetResult.data) {
+        oldData = storeGetResult.data;
+        ctx.session.data = structuredClone(oldData);
       } else {
         ctx.session.data.absoluteDeadline =
           Math.floor(Date.now() / 1000) + this.config.absoluteTimeout;
-        storeGetResult.data = structuredClone(ctx.session.data);
+        oldData = structuredClone(ctx.session.data);
       }
       await next(req, res, ctx);
       if (res.headersSent) {
@@ -53,7 +60,7 @@ export function Use(deps: { parseSID: typeof parseSID }) {
           this.config.handleStoreDeleteError(req, err);
         }
       }
-      if (!isDeepStrictEqual(ctx.session.data, storeGetResult.data)) {
+      if (!isDeepStrictEqual(ctx.session.data, oldData)) {
         const err = await this.config.store.set(
           ctx.session.id,
           ctx.session.data,
