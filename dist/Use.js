@@ -8,7 +8,7 @@ export function Use(deps) {
         return async (req, res, ctx) => {
             const parseSIDResult = await deps.parseSID(this.config.secrets, req);
             if (parseSIDResult.errors.length > 0) {
-                ctx.session.errors = structuredClone(parseSIDResult.errors);
+                ctx.session.errors = ctx.session.errors.concat(structuredClone(parseSIDResult.errors));
                 for (const err of ctx.session.errors) {
                     if (err instanceof SessionIDGenError) {
                         await next(req, res, ctx);
