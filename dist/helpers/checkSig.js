@@ -1,19 +1,8 @@
 import { createHmac, timingSafeEqual } from "crypto";
-export function checkSig(signedID, secret) {
-    try {
-        const [id, sig] = signedID.split(".", 2);
-        if (!id || !sig) {
-            return { id: "", sig: "", ok: false };
-        }
-        const generatedSig = createHmac("sha256", secret)
-            .update(id, "hex")
-            .digest();
-        if (!timingSafeEqual(Buffer.from(sig, "hex"), generatedSig)) {
-            return { id: "", sig: "", ok: false };
-        }
-        return { id, sig, ok: true };
+export function checkSig(id, sig, secret) {
+    const generatedSig = createHmac("sha256", secret).update(id, "hex").digest();
+    if (!timingSafeEqual(Buffer.from(sig, "hex"), generatedSig)) {
+        return { sig: generatedSig.toString("hex"), ok: false };
     }
-    catch (error) {
-        return { id: "", sig: "", ok: false };
-    }
+    return { sig, ok: true };
 }

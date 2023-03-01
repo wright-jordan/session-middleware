@@ -1,6 +1,5 @@
 /// <reference types="node" />
-export declare function checkSig(signedID: string, secret: Buffer): {
-    id: string;
+export declare function checkSig(id: string, sig: string, secret: Buffer): {
     sig: string;
     ok: boolean;
 };
