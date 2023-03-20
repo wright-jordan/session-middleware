@@ -38,6 +38,7 @@ export async function parseSID(
     const { id, err } = await newSessionID();
     if (err) {
       errors.push(err);
+      // Should isNew be false here?
       return { id, sig: "", isNew: true, errors };
     }
     return { id, sig: newSig(id, secrets[0]!), isNew: true, errors };
