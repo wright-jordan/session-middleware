@@ -55,6 +55,7 @@ export function Use(deps: { parseSID: typeof parseSID }) {
         return;
       }
       let isOldSig: boolean = false;
+      // Maybe save it when id changes even if nothing else?
       if (ctx.session.id !== parseSIDResult.id) {
         isOldSig = true;
         const err = await this.config.store.delete(parseSIDResult.id);
