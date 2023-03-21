@@ -29,7 +29,7 @@ function isHex(s: string) {
     );
 }
 
-export function validateSID(signedID: string): {
+export function validateSignedID(signedID: string): {
   id: string;
   sig: string;
   ok: boolean;

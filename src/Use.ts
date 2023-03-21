@@ -1,34 +1,45 @@
-import type { parseSID } from "./deps/parseSID.js";
-import { SessionIDGenError } from "./errors.js";
+import { SessionError, RandomBytesError, StoreGetError } from "./errors.js";
 import type { SessionMiddleware } from "./types/SessionMiddleware.js";
 import type * as tsHTTP from "ts-http";
 import { isDeepStrictEqual } from "util";
 import cookie from "cookie";
-import { newSig } from "./helpers/newSig.js";
+import { newSignature } from "./helpers/newSignature.js";
 import * as _ from "cookies-middleware";
 import type { SessionData } from "./types/SessionData.js";
+import type { IncomingMessage } from "http";
 
-export function Use(deps: { parseSID: typeof parseSID }) {
+export function Use(deps: {
+  parseSignedID: (
+    secrets: Buffer[],
+    req: IncomingMessage
+  ) => Promise<{
+    id: string;
+    sig: string;
+    isNew: boolean;
+    errors: SessionError[];
+  }>;
+}) {
   return function use(
     this: SessionMiddleware,
     next: tsHTTP.Handler
   ): tsHTTP.Handler {
     return async (req, res, ctx) => {
-      const parseSIDResult = await deps.parseSID(this.config.secrets, req);
+      const parseSIDResult = await deps.parseSignedID(this.config.secrets, req);
       if (parseSIDResult.errors.length > 0) {
         ctx.session.errors = ctx.session.errors.concat(
           structuredClone(parseSIDResult.errors)
         );
         for (const err of ctx.session.errors) {
-          if (err instanceof SessionIDGenError) {
+          if (err instanceof RandomBytesError) {
             await next(req, res, ctx);
             return;
           }
         }
       }
-      let storeGetResult: Awaited<
-        ReturnType<typeof this.config.store.get>
-      > | null = null;
+      let storeGetResult: {
+        data: SessionData | null;
+        err: StoreGetError | null;
+      } | null = null;
       if (!parseSIDResult.isNew) {
         storeGetResult = await this.config.store.get(
           parseSIDResult.id,
@@ -55,7 +66,6 @@ export function Use(deps: { parseSID: typeof parseSID }) {
         return;
       }
       let isOldSig: boolean = false;
-      // Maybe save it when id changes even if nothing else?
       if (ctx.session.id !== parseSIDResult.id) {
         isOldSig = true;
         const err = await this.config.store.delete(parseSIDResult.id);
@@ -63,7 +73,7 @@ export function Use(deps: { parseSID: typeof parseSID }) {
           this.config.handleStoreDeleteError(req, err);
         }
       }
-      if (!isDeepStrictEqual(ctx.session.data, oldData)) {
+      if (isOldSig || !isDeepStrictEqual(ctx.session.data, oldData)) {
         const err = await this.config.store.set(
           ctx.session.id,
           ctx.session.data,
@@ -77,7 +87,7 @@ export function Use(deps: { parseSID: typeof parseSID }) {
         this.config.cookie.name,
         `${ctx.session.id}.${
           isOldSig
-            ? newSig(ctx.session.id, this.config.secrets[0]!)
+            ? newSignature(ctx.session.id, this.config.secrets[0]!)
             : parseSIDResult.sig
         }`,
         {

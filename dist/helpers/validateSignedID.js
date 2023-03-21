@@ -26,7 +26,7 @@ function isHex(s) {
         "9",
     ].includes(ch));
 }
-export function validateSID(signedID) {
+export function validateSignedID(signedID) {
     const [id, sig] = signedID.split(".", 2);
     if (!id || !sig) {
         return { id: "", sig: "", ok: false };

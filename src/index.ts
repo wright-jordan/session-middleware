@@ -1,7 +1,7 @@
 import type {
   SessionError,
-  BadSigError,
-  SessionIDGenError,
+  BadSignatureError,
+  RandomBytesError,
   StoreDeleteError,
   StoreGetError,
   StoreSetError,
@@ -26,8 +26,8 @@ declare module "ts-http" {
 
 export {
   SessionError,
-  SessionIDGenError,
-  BadSigError,
+  BadSignatureError,
+  RandomBytesError,
   StoreDeleteError,
   StoreGetError,
   StoreSetError,

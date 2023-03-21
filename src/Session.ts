@@ -1,9 +1,9 @@
 import type { SessionConfig } from "./types/SessionConfig.js";
 import type { SessionMiddleware } from "./types/SessionMiddleware.js";
 import { Use } from "./Use.js";
-import { parseSID } from "./deps/parseSID.js";
+import { parseSignedID } from "./deps/parseSignedID.js";
 
-const use = Use({ parseSID });
+const use = Use({ parseSignedID });
 
 export function Session(config: SessionConfig): SessionMiddleware {
   return {

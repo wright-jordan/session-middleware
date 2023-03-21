@@ -1,16 +1,16 @@
-import { SessionIDGenError } from "./errors.js";
+import { RandomBytesError } from "./errors.js";
 import { isDeepStrictEqual } from "util";
 import cookie from "cookie";
-import { newSig } from "./helpers/newSig.js";
+import { newSignature } from "./helpers/newSignature.js";
 import "cookies-middleware";
 export function Use(deps) {
     return function use(next) {
         return async (req, res, ctx) => {
-            const parseSIDResult = await deps.parseSID(this.config.secrets, req);
+            const parseSIDResult = await deps.parseSignedID(this.config.secrets, req);
             if (parseSIDResult.errors.length > 0) {
                 ctx.session.errors = ctx.session.errors.concat(structuredClone(parseSIDResult.errors));
                 for (const err of ctx.session.errors) {
-                    if (err instanceof SessionIDGenError) {
+                    if (err instanceof RandomBytesError) {
                         await next(req, res, ctx);
                         return;
                     }
@@ -48,14 +48,14 @@ export function Use(deps) {
                     this.config.handleStoreDeleteError(req, err);
                 }
             }
-            if (!isDeepStrictEqual(ctx.session.data, oldData)) {
+            if (isOldSig || !isDeepStrictEqual(ctx.session.data, oldData)) {
                 const err = await this.config.store.set(ctx.session.id, ctx.session.data, this.config.idleTimeout);
                 if (err) {
                     this.config.handleStoreSetError(req, err);
                 }
             }
             const cookieString = cookie.serialize(this.config.cookie.name, `${ctx.session.id}.${isOldSig
-                ? newSig(ctx.session.id, this.config.secrets[0])
+                ? newSignature(ctx.session.id, this.config.secrets[0])
                 : parseSIDResult.sig}`, {
                 domain: this.config.cookie.domain,
                 httpOnly: true,

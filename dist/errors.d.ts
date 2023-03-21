@@ -1,7 +1,7 @@
 export declare class SessionError extends Error {
     constructor(opts: ErrorOptions | null);
 }
-export declare class BadSigError extends SessionError {
+export declare class BadSignatureError extends SessionError {
     constructor(opts: ErrorOptions | null);
 }
 export declare class StoreGetError extends SessionError {
@@ -13,6 +13,6 @@ export declare class StoreSetError extends SessionError {
 export declare class StoreDeleteError extends SessionError {
     constructor(opts: ErrorOptions);
 }
-export declare class SessionIDGenError extends SessionError {
+export declare class RandomBytesError extends SessionError {
     constructor(opts: ErrorOptions | null);
 }

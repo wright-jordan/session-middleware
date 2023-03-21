@@ -1,6 +1,6 @@
 import { Use } from "./Use.js";
-import { parseSID } from "./deps/parseSID.js";
-const use = Use({ parseSID });
+import { parseSignedID } from "./deps/parseSignedID.js";
+const use = Use({ parseSignedID });
 export function Session(config) {
     return {
         config,

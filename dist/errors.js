@@ -3,7 +3,7 @@ export class SessionError extends Error {
         super("", opts ?? { cause: null });
     }
 }
-export class BadSigError extends SessionError {
+export class BadSignatureError extends SessionError {
     constructor(opts) {
         super(opts);
     }
@@ -23,7 +23,7 @@ export class StoreDeleteError extends SessionError {
         super(opts);
     }
 }
-export class SessionIDGenError extends SessionError {
+export class RandomBytesError extends SessionError {
     constructor(opts) {
         super(opts);
     }
