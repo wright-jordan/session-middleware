@@ -6,9 +6,9 @@ import "cookies-middleware";
 export function Use(deps) {
     return function use(next) {
         return async (req, res, ctx) => {
-            const parseSIDResult = await deps.parseSignedID(this.config.secrets, req);
-            if (parseSIDResult.errors.length > 0) {
-                ctx.session.errors = ctx.session.errors.concat(structuredClone(parseSIDResult.errors));
+            const parseSignedIDResult = await deps.parseSignedID(this.config.secrets, req);
+            if (parseSignedIDResult.errors.length > 0) {
+                ctx.session.errors = ctx.session.errors.concat(structuredClone(parseSignedIDResult.errors));
                 for (const err of ctx.session.errors) {
                     if (err instanceof RandomBytesError) {
                         await next(req, res, ctx);
@@ -17,15 +17,15 @@ export function Use(deps) {
                 }
             }
             let storeGetResult = null;
-            if (!parseSIDResult.isNew) {
-                storeGetResult = await this.config.store.get(parseSIDResult.id, this.config.idleTimeout);
+            if (!parseSignedIDResult.isNew) {
+                storeGetResult = await this.config.store.get(parseSignedIDResult.id, this.config.idleTimeout);
                 if (storeGetResult.err) {
                     ctx.session.errors.push(storeGetResult.err);
                     await next(req, res, ctx);
                     return;
                 }
             }
-            ctx.session.id = parseSIDResult.id;
+            ctx.session.id = parseSignedIDResult.id;
             let oldData = null;
             if (storeGetResult && storeGetResult.data) {
                 oldData = storeGetResult.data;
@@ -41,9 +41,9 @@ export function Use(deps) {
                 return;
             }
             let isOldSig = false;
-            if (ctx.session.id !== parseSIDResult.id) {
+            if (ctx.session.id !== parseSignedIDResult.id) {
                 isOldSig = true;
-                const err = await this.config.store.delete(parseSIDResult.id);
+                const err = await this.config.store.delete(parseSignedIDResult.id);
                 if (err) {
                     this.config.handleStoreDeleteError(req, err);
                 }
@@ -56,7 +56,7 @@ export function Use(deps) {
             }
             const cookieString = cookie.serialize(this.config.cookie.name, `${ctx.session.id}.${isOldSig
                 ? newSignature(ctx.session.id, this.config.secrets[0])
-                : parseSIDResult.sig}`, {
+                : parseSignedIDResult.sig}`, {
                 domain: this.config.cookie.domain,
                 httpOnly: true,
                 maxAge: 60 * 60 * 24 * 400,
