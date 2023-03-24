@@ -24,6 +24,9 @@ export function Use(deps: {
     next: tsHTTP.Handler
   ): tsHTTP.Handler {
     return async (req, res, ctx) => {
+      // TODO: Create MultiError class with
+      // new(errors: ...SessionError[]): MultiError
+      // TODO: create type Result<T, E extends Error> = [T, E];
       const parseSignedIDResult = await deps.parseSignedID(
         this.config.secrets,
         req
