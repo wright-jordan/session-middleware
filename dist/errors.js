@@ -28,3 +28,18 @@ export class RandomBytesError extends SessionError {
         super(opts);
     }
 }
+export class MultiError {
+    #errors;
+    constructor(...errors) {
+        this.#errors = errors;
+    }
+    list() {
+        return this.#errors;
+    }
+    has(errClass) {
+        return this.#errors.some((err) => err instanceof errClass);
+    }
+    set(...errs) {
+        this.#errors = this.#errors.concat(errs);
+    }
+}

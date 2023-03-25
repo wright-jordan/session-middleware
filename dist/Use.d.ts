@@ -1,6 +1,6 @@
 /// <reference types="node" />
 /// <reference types="node" />
-import { SessionError } from "./errors.js";
+import { SessionError, MultiError } from "./errors.js";
 import type { SessionMiddleware } from "./types/SessionMiddleware.js";
 import type * as tsHTTP from "ts-http";
 import type { IncomingMessage } from "http";
@@ -9,6 +9,6 @@ export declare function Use(deps: {
         id: string;
         sig: string;
         isNew: boolean;
-        errors: SessionError[];
+        err: MultiError<SessionError> | null;
     }>;
 }): (this: SessionMiddleware, next: tsHTTP.Handler) => tsHTTP.Handler;

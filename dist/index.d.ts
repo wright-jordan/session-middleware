@@ -1,4 +1,4 @@
-import type { SessionError, BadSignatureError, RandomBytesError, StoreDeleteError, StoreGetError, StoreSetError } from "./errors.js";
+import type { SessionError, BadSignatureError, RandomBytesError, StoreDeleteError, StoreGetError, StoreSetError, MultiError } from "./errors.js";
 import type { SessionData } from "./types/SessionData.js";
 import type { SessionConfig } from "./types/SessionConfig.js";
 import type { SessionMiddleware } from "./types/SessionMiddleware.js";
@@ -7,7 +7,7 @@ import { Session } from "./Session.js";
 interface SessionContext {
     id: string;
     data: SessionData;
-    errors: SessionError[];
+    err: MultiError<SessionError>;
 }
 declare module "ts-http" {
     interface Context {

@@ -1,10 +1,10 @@
 /// <reference types="node" />
 /// <reference types="node" />
-import type { IncomingMessage } from "http";
-import { SessionError } from "../errors.js";
-export declare function parseSignedID(secrets: Buffer[], req: IncomingMessage): Promise<{
+import type * as http from "http";
+import { MultiError, SessionError } from "../errors.js";
+export declare function parseSignedID(secrets: Buffer[], req: http.IncomingMessage): Promise<{
     id: string;
     sig: string;
     isNew: boolean;
-    errors: SessionError[];
+    err: MultiError<SessionError> | null;
 }>;

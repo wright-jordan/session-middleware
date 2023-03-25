@@ -1,26 +1,25 @@
-import { RandomBytesError } from "./errors.js";
-import { isDeepStrictEqual } from "util";
+import { RandomBytesError, } from "./errors.js";
+import * as util from "util";
 import cookie from "cookie";
 import { newSignature } from "./helpers/newSignature.js";
 import "cookies-middleware";
 export function Use(deps) {
     return function use(next) {
         return async (req, res, ctx) => {
+            // TODO: create type Result<T, E extends Error> = [T, E];
             const parseSignedIDResult = await deps.parseSignedID(this.config.secrets, req);
-            if (parseSignedIDResult.errors.length > 0) {
-                ctx.session.errors = ctx.session.errors.concat(structuredClone(parseSignedIDResult.errors));
-                for (const err of ctx.session.errors) {
-                    if (err instanceof RandomBytesError) {
-                        await next(req, res, ctx);
-                        return;
-                    }
+            if (parseSignedIDResult.err) {
+                ctx.session.err.set(...parseSignedIDResult.err.list());
+                if (ctx.session.err.has(RandomBytesError)) {
+                    await next(req, res, ctx);
+                    return;
                 }
             }
             let storeGetResult = null;
             if (!parseSignedIDResult.isNew) {
                 storeGetResult = await this.config.store.get(parseSignedIDResult.id, this.config.idleTimeout);
                 if (storeGetResult.err) {
-                    ctx.session.errors.push(storeGetResult.err);
+                    ctx.session.err.set(storeGetResult.err);
                     await next(req, res, ctx);
                     return;
                 }
@@ -48,7 +47,7 @@ export function Use(deps) {
                     this.config.handleStoreDeleteError(req, err);
                 }
             }
-            if (isOldSig || !isDeepStrictEqual(ctx.session.data, oldData)) {
+            if (isOldSig || !util.isDeepStrictEqual(ctx.session.data, oldData)) {
                 const err = await this.config.store.set(ctx.session.id, ctx.session.data, this.config.idleTimeout);
                 if (err) {
                     this.config.handleStoreSetError(req, err);

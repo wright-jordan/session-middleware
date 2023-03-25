@@ -1,7 +1,12 @@
-import { SessionError, RandomBytesError, StoreGetError } from "./errors.js";
+import {
+  SessionError,
+  RandomBytesError,
+  StoreGetError,
+  MultiError,
+} from "./errors.js";
 import type { SessionMiddleware } from "./types/SessionMiddleware.js";
 import type * as tsHTTP from "ts-http";
-import { isDeepStrictEqual } from "util";
+import * as util from "util";
 import cookie from "cookie";
 import { newSignature } from "./helpers/newSignature.js";
 import * as _ from "cookies-middleware";
@@ -16,7 +21,7 @@ export function Use(deps: {
     id: string;
     sig: string;
     isNew: boolean;
-    errors: SessionError[];
+    err: MultiError<SessionError> | null;
   }>;
 }) {
   return function use(
@@ -24,22 +29,16 @@ export function Use(deps: {
     next: tsHTTP.Handler
   ): tsHTTP.Handler {
     return async (req, res, ctx) => {
-      // TODO: Create MultiError class with
-      // new(errors: ...SessionError[]): MultiError
       // TODO: create type Result<T, E extends Error> = [T, E];
       const parseSignedIDResult = await deps.parseSignedID(
         this.config.secrets,
         req
       );
-      if (parseSignedIDResult.errors.length > 0) {
-        ctx.session.errors = ctx.session.errors.concat(
-          structuredClone(parseSignedIDResult.errors)
-        );
-        for (const err of ctx.session.errors) {
-          if (err instanceof RandomBytesError) {
-            await next(req, res, ctx);
-            return;
-          }
+      if (parseSignedIDResult.err) {
+        ctx.session.err.set(...parseSignedIDResult.err.list());
+        if (ctx.session.err.has(RandomBytesError)) {
+          await next(req, res, ctx);
+          return;
         }
       }
       let storeGetResult: {
@@ -52,7 +51,7 @@ export function Use(deps: {
           this.config.idleTimeout
         );
         if (storeGetResult.err) {
-          ctx.session.errors.push(storeGetResult.err);
+          ctx.session.err.set(storeGetResult.err);
           await next(req, res, ctx);
           return;
         }
@@ -79,7 +78,7 @@ export function Use(deps: {
           this.config.handleStoreDeleteError(req, err);
         }
       }
-      if (isOldSig || !isDeepStrictEqual(ctx.session.data, oldData)) {
+      if (isOldSig || !util.isDeepStrictEqual(ctx.session.data, oldData)) {
         const err = await this.config.store.set(
           ctx.session.id,
           ctx.session.data,

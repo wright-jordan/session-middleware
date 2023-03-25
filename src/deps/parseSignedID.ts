@@ -1,46 +1,51 @@
-import type { IncomingMessage } from "http";
+import type * as http from "http";
 import { checkSignature } from "../helpers/checkSignature.js";
-import { parse } from "cookie";
-import { BadSignatureError, SessionError } from "../errors.js";
+import * as cookie from "cookie";
+import { BadSignatureError, MultiError, SessionError } from "../errors.js";
 import { newSignature } from "../helpers/newSignature.js";
 import { newSessionID } from "../helpers/newSessionID.js";
 import { validateSignedID } from "../helpers/validateSignedID.js";
 
 export async function parseSignedID(
   secrets: Buffer[],
-  req: IncomingMessage
+  req: http.IncomingMessage
 ): Promise<{
   id: string;
   sig: string;
   isNew: boolean;
-  errors: SessionError[];
+  err: MultiError<SessionError> | null;
 }> {
   const cookieHeader = req.headers["cookie"];
   if (!cookieHeader) {
     const { id, err } = await newSessionID();
     if (err) {
-      return { id, sig: "", isNew: false, errors: [err] };
+      return { id, sig: "", isNew: false, err: new MultiError(err) };
     }
-    return { id, sig: newSignature(id, secrets[0]!), isNew: true, errors: [] };
+    return { id, sig: newSignature(id, secrets[0]!), isNew: true, err: null };
   }
-  const cookies = parse(cookieHeader);
+  const cookies = cookie.parse(cookieHeader);
   const signedID = cookies["sid"];
   if (!signedID) {
     const { id, err } = await newSessionID();
     if (err) {
-      return { id, sig: "", isNew: false, errors: [err] };
+      return { id, sig: "", isNew: false, err: new MultiError(err) };
     }
-    return { id, sig: newSignature(id, secrets[0]!), isNew: true, errors: [] };
+    return { id, sig: newSignature(id, secrets[0]!), isNew: true, err: null };
   }
   const validateSIDResult = validateSignedID(signedID);
   if (!validateSIDResult.ok) {
-    const errors: SessionError[] = [new BadSignatureError(null)];
-    const { id, err } = await newSessionID();
-    if (err) {
-      errors.push(err);
-      return { id, sig: "", isNew: false, errors };
+    const err = new MultiError(new BadSignatureError(null));
+    const sessionIDResult = await newSessionID();
+    if (sessionIDResult.err) {
+      err.set(sessionIDResult.err);
+      return { id: sessionIDResult.id, sig: "", isNew: false, err };
     }
-    return { id, sig: newSignature(id, secrets[0]!), isNew: true, errors };
+    return {
+      id: sessionIDResult.id,
+      sig: newSignature(sessionIDResult.id, secrets[0]!),
+      isNew: true,
+      err,
+    };
   }
   let checkSignatureResult = checkSignature(
     validateSIDResult.id,
@@ -52,7 +57,7 @@ export async function parseSignedID(
       id: validateSIDResult.id,
       sig: checkSignatureResult.sig,
       isNew: false,
-      errors: [],
+      err: null,
     };
   }
 
@@ -66,14 +71,19 @@ export async function parseSignedID(
       secrets[i]!
     );
     if (checkSignatureResult.ok) {
-      return { id: validateSIDResult.id, sig, isNew: false, errors: [] };
+      return { id: validateSIDResult.id, sig, isNew: false, err: null };
     }
   }
-  const errors: SessionError[] = [new BadSignatureError(null)];
-  const { id, err } = await newSessionID();
-  if (err) {
-    errors.push(err);
-    return { id, sig: "", isNew: false, errors };
+  const err = new MultiError(new BadSignatureError(null));
+  const sessionIDResult = await newSessionID();
+  if (sessionIDResult.err) {
+    err.set(sessionIDResult.err);
+    return { id: sessionIDResult.id, sig: "", isNew: false, err };
   }
-  return { id, sig: newSignature(id, secrets[0]!), isNew: true, errors };
+  return {
+    id: sessionIDResult.id,
+    sig: newSignature(sessionIDResult.id, secrets[0]!),
+    isNew: true,
+    err,
+  };
 }

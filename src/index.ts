@@ -5,6 +5,7 @@ import type {
   StoreDeleteError,
   StoreGetError,
   StoreSetError,
+  MultiError,
 } from "./errors.js";
 import type { SessionData } from "./types/SessionData.js";
 import type { SessionConfig } from "./types/SessionConfig.js";
@@ -15,7 +16,7 @@ import { Session } from "./Session.js";
 interface SessionContext {
   id: string;
   data: SessionData;
-  errors: SessionError[];
+  err: MultiError<SessionError>;
 }
 
 declare module "ts-http" {
